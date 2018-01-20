@@ -1,7 +1,8 @@
-var myProductName = "davesocket", myVersion = "0.4.0";  
+var myProductName = "davesocket", myVersion = "0.4.4";  
 
 exports.start = webSocketStartup; 
 exports.notifySocketSubscribers = notifySocketSubscribers;
+exports.notifyOneSubscriber = notifyOneSubscriber;
 exports.countOpenSockets = countOpenSockets;
 exports.getOpenSocketsArray = getOpenSocketsArray;
 
@@ -13,7 +14,9 @@ const os = require ("os");
 var theWsServer;
 
 var config = {
-	thePort: 1401
+	websocketPort: 1401,
+	newConnectionCallback: function (theConnection) {
+		}
 	};
 
 function getDomainName (clientIp, callback) { 
@@ -35,6 +38,9 @@ function getDomainName (clientIp, callback) {
 				}
 			});
 		}
+	}
+function notifyOneSubscriber (conn, verb, jstruct) {
+	conn.sendText (verb + "\r" + utils.jsonStringify (jstruct));
 	}
 function notifySocketSubscribers (verb, jstruct) {
 	if (theWsServer !== undefined) {
@@ -104,6 +110,9 @@ function handleWebSocketConnection (conn) {
 		whenLastUpdate: undefined,
 		ctUpdates: 0
 		};
+	
+	config.newConnectionCallback (conn);
+	
 	conn.on ("text", function (s) {
 		var words = s.split (" ");
 		if (words.length > 1) { //new protocol as of 11/29/15 by DW
@@ -130,14 +139,18 @@ function webSocketStartup (myConfig, callback) {
 			config [x] = myConfig [x];
 			}
 		}
-	console.log ("webSocketStartup: config.thePort == " + config.thePort);
+	console.log (myProductName + " v" + myVersion + ": config.websocketPort == " + config.websocketPort);
 	try {
 		theWsServer = websocket.createServer (handleWebSocketConnection);
-		theWsServer.listen (config.thePort);
-		callback (undefined);
+		theWsServer.listen (config.websocketPort);
+		if (callback !== undefined) {
+			callback (undefined);
+			}
 		}
 	catch (err) {
 		console.log ("webSocketStartup: err.message == " + err.message);
-		callback (err);
+		if (callback !== undefined) {
+			callback (err);
+			}
 		}
 	}
