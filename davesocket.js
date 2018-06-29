@@ -1,4 +1,4 @@
-var myProductName = "davesocket", myVersion = "0.4.4";  
+var myProductName = "davesocket", myVersion = "0.4.6";  
 
 exports.start = webSocketStartup; 
 exports.notifySocketSubscribers = notifySocketSubscribers;
@@ -16,6 +16,8 @@ var theWsServer;
 var config = {
 	websocketPort: 1401,
 	newConnectionCallback: function (theConnection) {
+		},
+	msgReceivedCallback: function (theConnection, theText) {
 		}
 	};
 
@@ -51,11 +53,11 @@ function notifySocketSubscribers (verb, jstruct) {
 		var jsontext = utils.jsonStringify (jstruct);
 		for (var i = 0; i < theWsServer.connections.length; i++) {
 			var conn = theWsServer.connections [i];
-			if (conn.chatLogData !== undefined) { //it's one of ours
+			if (conn.appData !== undefined) { //it's one of ours
 				try {
 					conn.sendText (verb + "\r" + jsontext);
-					conn.chatLogData.whenLastUpdate = now;
-					conn.chatLogData.ctUpdates++;
+					conn.appData.whenLastUpdate = now;
+					conn.appData.ctUpdates++;
 					ctUpdates++;
 					}
 				catch (err) {
@@ -77,15 +79,15 @@ function getOpenSocketsArray () { //return an array with data about open sockets
 	var theArray = new Array ();
 	for (var i = 0; i < theWsServer.connections.length; i++) {
 		var conn = theWsServer.connections [i];
-		if (conn.chatLogData !== undefined) { //it's one of ours
+		if (conn.appData !== undefined) { //it's one of ours
 			theArray [theArray.length] = {
 				arrayIndex: i,
-				lastVerb: conn.chatLogData.lastVerb,
-				urlToWatch: conn.chatLogData.urlToWatch,
-				domain: conn.chatLogData.domain,
-				whenStarted: utils.viewDate (conn.chatLogData.whenStarted),
-				whenLastUpdate: (conn.chatLogData.whenLastUpdate === undefined) ? "" : utils.viewDate (conn.chatLogData.whenLastUpdate),
-				ctUpdates: conn.chatLogData.ctUpdates
+				lastVerb: conn.appData.lastVerb,
+				urlToWatch: conn.appData.urlToWatch,
+				domain: conn.appData.domain,
+				whenStarted: utils.viewDate (conn.appData.whenStarted),
+				whenLastUpdate: (conn.appData.whenLastUpdate === undefined) ? "" : utils.viewDate (conn.appData.whenLastUpdate),
+				ctUpdates: conn.appData.ctUpdates
 				};
 			}
 		}
@@ -101,11 +103,11 @@ function handleWebSocketConnection (conn) {
 				theName = conn.socket.remoteAddress;
 				}
 			console.log (now.toLocaleTimeString () + " " + freemem + " " + method + " " + value + " " + theName);
-			conn.chatLogData.domain = theName; 
+			conn.appData.domain = theName; 
 			});
 		}
 	
-	conn.chatLogData = {
+	conn.appData = {
 		whenStarted: now,
 		whenLastUpdate: undefined,
 		ctUpdates: 0
@@ -114,19 +116,7 @@ function handleWebSocketConnection (conn) {
 	config.newConnectionCallback (conn);
 	
 	conn.on ("text", function (s) {
-		var words = s.split (" ");
-		if (words.length > 1) { //new protocol as of 11/29/15 by DW
-			conn.chatLogData.lastVerb = words [0];
-			switch (words [0]) {
-				case "watch":
-					conn.chatLogData.urlToWatch = utils.trimWhitespace (words [1]);
-					logToConsole (conn, conn.chatLogData.lastVerb, conn.chatLogData.urlToWatch);
-					break;
-				}
-			}
-		else {
-			conn.close ();
-			}
+		config.msgReceivedCallback (conn, s);
 		});
 	conn.on ("close", function () {
 		});

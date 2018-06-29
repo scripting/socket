@@ -10,3 +10,7 @@ Much better to factor it out, so that next time it's easier.
 
 1/20/18 by DW
 
+### Notes
+
+To be included in the list of clients that receive notifications, just send a message to the server. It doesn't matter what the message is, just receiving one will get you added.
+
